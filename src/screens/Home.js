@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  Vibration,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import AntDesign from "react-native-vector-icons/AntDesign";
@@ -22,8 +23,23 @@ import {
 } from "react-native-gesture-handler";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { useRef } from "react";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 const Home = ({ route }) => {
+  const [expoPushToken, setExpoPushToken] = useState("");
+  const [notification, setNotification] = useState(false);
+  const notificationListener = useRef();
+  const responseListener = useRef();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [time, setTime] = useState(new Date());
@@ -37,7 +53,31 @@ const Home = ({ route }) => {
   const [editDescription, setEditDescription] = useState("");
   const navigation = useNavigation();
 
-  const { date } = route.params || {};
+  const { date, name } = route.params || {};
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().then((token) =>
+      setExpoPushToken(token)
+    );
+    console.log(expoPushToken);
+
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notif) => {
+        setNotification(notif);
+      });
+
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log(response);
+      });
+
+    return () => {
+      Notifications.removeNotificationSubscription(
+        notificationListener.current
+      );
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
 
   useEffect(() => {
     loadTasks();
@@ -58,23 +98,35 @@ const Home = ({ route }) => {
   const handleModalSubmit = () => {
     setIsModalVisible(false);
     if (title !== "" || description !== "" || time !== "") {
+      const formattedTaskTime = time.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      // const formattedTaskTime = time.toLocaleTimeString([]);
       const newTask = {
         id: tasks.length + 1,
         title: title,
         description: description,
-        taskTime: time.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        taskTime: formattedTaskTime,
         date: date,
         isChecked: false,
         isSelected: false,
       };
+
       const updatedTasks = [...tasks, newTask];
       setTasks(updatedTasks);
       saveTasks(updatedTasks);
       setTitle("");
       setDescription("");
+
+      schedulePushNotification(
+        newTask.id,
+        newTask.title,
+        newTask.description
+        // newTask.taskTime
+      );
+
+      // console.log(timestamp);
     } else {
       Alert.alert("Please enter Task details!");
     }
@@ -121,7 +173,6 @@ const Home = ({ route }) => {
   const loadTasks = async () => {
     try {
       const storedTasks = await AsyncStorage.getItem("tasks");
-
       if (storedTasks) {
         setTasks(JSON.parse(storedTasks));
       }
@@ -131,21 +182,19 @@ const Home = ({ route }) => {
   };
 
   //Checkbox logic
-
   const handleCheckBoxChange = (taskId) => {
     setTasks((prevTasks) =>
       prevTasks.map((task) => {
         const updatedTask =
           task.id === taskId ? { ...task, isChecked: !task.isChecked } : task;
-        console.log(`Task ${taskId} isChecked: ${updatedTask.isChecked}`);
         return updatedTask;
       })
     );
   };
 
   //Action OnLeft Swipe
-
   const swipeFromRightOpen = (task) => {
+    Vibration.vibrate(100);
     const updatedTasks = tasks.filter((t) => t.id !== task.id);
     setTasks(updatedTasks);
     saveTasks(updatedTasks);
@@ -176,6 +225,7 @@ const Home = ({ route }) => {
   };
 
   const handleLongPressEdit = (taskId) => {
+    Vibration.vibrate(100);
     const todoToEdit = tasks.find((task) => task.id === taskId);
     setEditingTodo(todoToEdit); //Identifying which one to target.
     setEditTitle(todoToEdit.title); //Changing title of the found
@@ -356,7 +406,7 @@ const Home = ({ route }) => {
                   testID="timePicker"
                   value={time}
                   mode="time"
-                  is24Hour={false}
+                  is24Hour={true}
                   display="default"
                   onChange={handleTimeChange}
                 />
@@ -464,7 +514,7 @@ const Home = ({ route }) => {
                   testID="timePicker"
                   value={time}
                   mode="time"
-                  is24Hour={false}
+                  is24Hour={true}
                   display="default"
                   onChange={handleTimeChange}
                 />
@@ -520,25 +570,93 @@ const Home = ({ route }) => {
           </View>
         </Modal>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setIsModalVisible(true)}
-          style={{
-            position: "absolute",
-            bottom: 35,
-            right: 18,
-            backgroundColor: "white",
-            padding: 16,
-            borderRadius: 9,
-            marginTop: 7,
-          }}
-        >
-          <AntDesign name="plus" size={30} style={{ fontWeight: "bold" }} />
-        </TouchableOpacity>
+        {!isModalVisible && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsModalVisible(true)}
+            style={{
+              position: "absolute",
+              bottom: 35,
+              // right: "50%",
+              alignSelf: "center",
+              backgroundColor: "white",
+              padding: 23,
+              borderRadius: 40,
+              marginTop: 7,
+            }}
+          >
+            <AntDesign name="plus" size={32} style={{ fontWeight: "bold" }} />
+          </TouchableOpacity>
+        )}
       </View>
     </>
   );
 };
+
+async function schedulePushNotification(
+  taskId,
+  taskTitle,
+  taskDescription
+  // taskTime
+) {
+  // if (typeof taskTime === "string") {
+  //   const [hours, minutes] = taskTime.split(":").map((part) => parseInt(part));
+  //   console.log("hours", hours);
+  //   let dateTime = new Date();
+  //   dateTime.setHours(parseInt(hours));
+  //   dateTime.setMinutes(parseInt(minutes));
+  // };
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: taskTitle,
+      body: taskDescription,
+      data: { id: taskId },
+    },
+
+    trigger: {
+      seconds: 1,
+    },
+  });
+}
+
+async function registerForPushNotificationsAsync() {
+  let token;
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+    });
+  }
+
+  if (Device.isDevice) {
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") {
+      alert("Failed to get push token for push notification!");
+      return;
+    }
+    // Learn more about projectId:
+    // https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
+    token = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId: "e23bb8a2-0184-4da1-a37b-92caa4b3d93c",
+      })
+    ).data;
+    console.log(token);
+  } else {
+    alert("Must use physical device for Push Notifications");
+  }
+
+  return token;
+}
 
 const styles = StyleSheet.create({
   centeredView: {

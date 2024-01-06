@@ -8,11 +8,9 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CompletedTask = ({ route }) => {
-  const { title, description, time, checked, updateChecked } =
-    route.params || {};
+  const { title, description, time } = route.params || {};
   const [greeting, setGreeting] = useState("Good Morning");
-  const [swiped, setSwiped] = useState(false);
-  const [isTaskChecked, setIsTaskChecked] = useState(checked);
+  const [loggedUserName, setLoggedUserName] = useState("");
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -25,37 +23,19 @@ const CompletedTask = ({ route }) => {
     }
   });
 
-  const RightSwipeActions = () => {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#86FF72",
-          opacity: 0.8,
-          justifyContent: "center",
-          borderRadius: 26,
-          padding: -10,
-        }}
-      >
-        <View
-          style={{
-            color: "white",
-            paddingHorizontal: 10,
-            fontWeight: "600",
-          }}
-        >
-          <Text style={{ color: "white", fontWeight: "bold" }}>
-            Mark as Finished
-          </Text>
-        </View>
-      </View>
-    );
+  const retrieveUserName = async () => {
+    try {
+      const user = await AsyncStorage.getItem("userName");
+      const cleanedUser = user ? user.replace(/"/g, "") : "";
+      setLoggedUserName(cleanedUser);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const swipeFromRightOpen = () => {
-    setSwiped(true);
-    updateChecked(true);
-  };
+  useEffect(() => {
+    retrieveUserName();
+  }, []);
 
   return (
     <View
@@ -73,7 +53,7 @@ const CompletedTask = ({ route }) => {
         }}
       >
         {greeting} {"     "}
-        <Text>Irfan,</Text>
+        <Text>{loggedUserName},</Text>
       </Text>
       <View style={{ marginLeft: 22, marginTop: 20 }}>
         <Text style={{ fontSize: 24, fontWeight: "500" }}>{title}</Text>

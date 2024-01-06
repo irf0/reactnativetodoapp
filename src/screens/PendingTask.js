@@ -8,10 +8,10 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PendingTask = ({ route }) => {
-  const { title, description, time, checked, updateChecked } =
-    route.params || {};
+  const { title, description, time, updateChecked } = route.params || {};
   const [greeting, setGreeting] = useState("Good Morning");
   const [swiped, setSwiped] = useState(false);
+  const [loggedUserName, setLoggedUserName] = useState("");
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -56,6 +56,20 @@ const PendingTask = ({ route }) => {
     updateChecked(true);
   };
 
+  const retrieveUserName = async () => {
+    try {
+      const user = await AsyncStorage.getItem("userName");
+      const cleanedUser = user ? user.replace(/"/g, "") : "";
+      setLoggedUserName(cleanedUser);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    retrieveUserName();
+  }, []);
+
   return (
     <View
       style={{
@@ -72,7 +86,7 @@ const PendingTask = ({ route }) => {
         }}
       >
         {greeting} {"     "}
-        <Text>Irfan,</Text>
+        <Text>{loggedUserName},</Text>
       </Text>
       <View style={{ marginLeft: 22, marginTop: 20 }}>
         <Text style={{ fontSize: 24, fontWeight: "500" }}>{title}</Text>
