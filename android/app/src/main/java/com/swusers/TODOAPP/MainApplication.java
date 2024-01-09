@@ -3,6 +3,8 @@ package com.swusers.TODOAPP;
 import android.app.Application;
 import android.content.res.Configuration;
 import androidx.annotation.NonNull;
+import com.wix.reactnativenotifications.RNNotificationsPackage;
+
 
 import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;

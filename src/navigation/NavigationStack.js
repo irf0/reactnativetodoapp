@@ -40,6 +40,7 @@ const NavigationStack = () => {
       const user = await AsyncStorage.getItem("userName");
       if (user) {
         setIsUserLogged(true);
+        navigation.navigate("Home");
       } else {
         setIsUserLogged(false);
       }
@@ -56,38 +57,16 @@ const NavigationStack = () => {
     <>
       {isUserLogged ? (
         <Stack.Navigator initialRouteName="Home">
-          {/* <Stack.Screen name="Welcome" component={WelcomeScreen} /> */}
           <Stack.Screen
             name="Home"
             component={Home}
-            initialParams={{ date: currentDate }}
+            initialParams={navigation.navigate("Home", { date: currentDate })}
             options={{
               headerShadowVisible: false,
               headerBackTitleVisible: false,
               headerShown: true,
-              title: `${currentDate.toDateString().slice(0, -4)}`,
+              title: `Today, ${currentDate.toDateString().slice(0, -4)}`,
               headerTitleAlign: "center",
-              headerLeft: () => (
-                <AntDesign
-                  name="arrowleft"
-                  size={30}
-                  color="white"
-                  onPress={() =>
-                    navigation.navigate("Yesterday", { date: yesterdayDate })
-                  }
-                />
-              ),
-              headerRight: () => (
-                <AntDesign
-                  name="arrowright"
-                  size={30}
-                  color="white"
-                  onPress={() =>
-                    navigation.navigate("Tommorrow", { date: TommorowDate })
-                  }
-                />
-              ),
-
               headerTintColor: "white",
               headerStyle: {
                 elevation: 0,

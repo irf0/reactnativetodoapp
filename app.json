@@ -1,7 +1,30 @@
 {
   "expo": {
+    "name": "todulo",
+    "slug": "todulo-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+     "icon": "./assets/toduloIcon.png",
+     "userInterfaceStyle": "light",
+       "splash": {
+      "image": "./assets/toduloSplash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#011330"
+          },
+            "assetBundlePatterns": [
+      "**/*"
+    ],
+
+     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/toduloIcon.png",
+        "backgroundColor": "#011330"
+      },
+      "package": "com.swusers.TODOAPP",
+      "versionCode": 1
+    },
     "extra": {
-      "eas": {
+      "eas": {       
         "projectId": "e23bb8a2-0184-4da1-a37b-92caa4b3d93c"
       }
     },

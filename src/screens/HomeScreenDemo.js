@@ -9,7 +9,6 @@ import {
   Pressable,
   Alert,
   Vibration,
-  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import AntDesign from "react-native-vector-icons/AntDesign";
@@ -27,7 +26,6 @@ import { useNavigation } from "@react-navigation/native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRef } from "react";
-import { scheduleNotificationForToday } from "../components/Notifications";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -48,6 +46,7 @@ const Home = ({ route }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tasks, setTasks] = useState([]);
+  const [isTaskChecked, setIsTaskChecked] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
   const [isEditingModalVisible, setEditingModalVisible] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -69,17 +68,7 @@ const Home = ({ route }) => {
 
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        const taskState =
-          response.notification.request.content.data?.checkedState;
-        const title = response.notification.request.content.data?.title;
-        const time = response.notification.request.content.data?.time;
-        const description =
-          response.notification.request.content.data?.description;
-        if (!taskState) {
-          navigation.navigate("PendingTask", { title, time, description });
-        } else {
-          navigation.navigate("CompletedTask", { title, time, description });
-        }
+        console.log(response);
       });
 
     return () => {
@@ -103,9 +92,6 @@ const Home = ({ route }) => {
 
   const handleTimeChange = (e, chosenTime) => {
     setShowPicker(false);
-    if (chosenTime < new Date()) {
-      Alert.alert("Please enter a future time!");
-    }
     setTime(chosenTime);
   };
 
@@ -116,6 +102,7 @@ const Home = ({ route }) => {
         hour: "2-digit",
         minute: "2-digit",
       });
+      // const formattedTaskTime = time.toLocaleTimeString([]);
       const newTask = {
         id: tasks.length + 1,
         title: title,
@@ -135,10 +122,11 @@ const Home = ({ route }) => {
       schedulePushNotification(
         newTask.id,
         newTask.title,
-        newTask.description,
-        newTask.taskTime,
-        newTask.isChecked
+        newTask.description
+        // newTask.taskTime
       );
+
+      // console.log(timestamp);
     } else {
       Alert.alert("Please enter Task details!");
     }
@@ -320,70 +308,52 @@ const Home = ({ route }) => {
           flex: 1,
         }}
       >
-        {tasks.length >= 1 ? (
-          <FlatList
-            data={tasks}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <GestureHandlerRootView>
-                <Swipeable
-                  renderLeftActions={RightSwipeActions}
-                  onSwipeableOpen={() => {
-                    swipeFromRightOpen(item);
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <GestureHandlerRootView>
+              <Swipeable
+                renderLeftActions={RightSwipeActions}
+                onSwipeableOpen={() => {
+                  swipeFromRightOpen(item);
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => navigateToDetail(item)}
+                  onLongPress={() => handleLongPressEdit(item.id)}
+                  style={{
+                    backgroundColor: item.isChecked ? "#86FF72" : "#FCCC6E",
+                    padding: 16,
+                    marginHorizontal: 22,
+                    marginVertical: 4,
+                    borderRadius: 7,
+                    flexDirection: "row",
                   }}
                 >
-                  <TouchableOpacity
-                    onPress={() => navigateToDetail(item)}
-                    onLongPress={() => handleLongPressEdit(item.id)}
-                    style={{
-                      backgroundColor: item.isChecked ? "#86FF72" : "#FCCC6E",
-                      padding: 16,
-                      marginHorizontal: 22,
-                      marginVertical: 4,
-                      borderRadius: 7,
-                      flexDirection: "row",
+                  <CheckBox
+                    checked={item.isChecked}
+                    onPress={() =>
+                      handleCheckBoxChange(item.id, item.isChecked)
+                    }
+                    checkedColor="green"
+                    containerStyle={{
+                      backgroundColor: "transparent",
+                      marginLeft: 0,
                     }}
-                  >
-                    <CheckBox
-                      checked={item.isChecked}
-                      onPress={() =>
-                        handleCheckBoxChange(item.id, item.isChecked)
-                      }
-                      checkedColor="green"
-                      containerStyle={{
-                        backgroundColor: "transparent",
-                        marginLeft: 0,
-                      }}
-                      size={30}
-                    />
-                    <View style={{ flexDirection: "column" }}>
-                      <Text>{item?.title}</Text>
-                      <Text>{item?.description}</Text>
-                      <Text>{item?.taskTime}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Swipeable>
-              </GestureHandlerRootView>
-            )}
-          />
-        ) : (
-          <View>
-            <Image
-              style={{ alignSelf: "center", width: 350, height: 500 }}
-              source={require("../../assets/nothingtodo.png")}
-            />
-            <Text
-              style={{
-                color: "white",
-                textAlign: "center",
-                textAlignVertical: "center",
-                fontSize: 25,
-              }}
-            >
-              There's Nothing Scheduled Buddy!
-            </Text>
-          </View>
-        )}
+                    size={30}
+                  />
+                  <View style={{ flexDirection: "column" }}>
+                    <Text>{item?.title}</Text>
+                    <Text>{item?.description}</Text>
+                    <Text>{item?.taskTime}</Text>
+                  </View>
+                </TouchableOpacity>
+              </Swipeable>
+            </GestureHandlerRootView>
+          )}
+        />
+
         {/* This is Editing Modal */}
 
         <Modal
@@ -436,7 +406,7 @@ const Home = ({ route }) => {
                   testID="timePicker"
                   value={time}
                   mode="time"
-                  is24Hour={false}
+                  is24Hour={true}
                   display="default"
                   onChange={handleTimeChange}
                 />
@@ -544,7 +514,7 @@ const Home = ({ route }) => {
                   testID="timePicker"
                   value={time}
                   mode="time"
-                  is24Hour={false}
+                  is24Hour={true}
                   display="default"
                   onChange={handleTimeChange}
                 />
@@ -626,51 +596,27 @@ const Home = ({ route }) => {
 async function schedulePushNotification(
   taskId,
   taskTitle,
-  taskDescription,
-  taskTime,
-  taskCheckedState
+  taskDescription
+  // taskTime
 ) {
-  if (typeof taskTime === "string") {
-    const [hours, minutes] = taskTime.split(":").map((part) => parseInt(part));
-    console.log("hours", hours);
-    let dateTime = new Date();
-    dateTime.setHours(parseInt(hours));
-    dateTime.setMinutes(parseInt(minutes));
+  // if (typeof taskTime === "string") {
+  //   const [hours, minutes] = taskTime.split(":").map((part) => parseInt(part));
+  //   console.log("hours", hours);
+  //   let dateTime = new Date();
+  //   dateTime.setHours(parseInt(hours));
+  //   dateTime.setMinutes(parseInt(minutes));
+  // };
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: taskTitle,
+      body: taskDescription,
+      data: { id: taskId },
+    },
 
-    const getCurrentHour = () => {
-      const currentDate = new Date();
-      const currentHour = currentDate.getHours();
-      const currentMinute = currentDate.getMinutes();
-      const remainingHours = Number(hours) - currentHour;
-      const remainingMinutes = Number(minutes) - currentMinute;
-      return { leftHours: remainingHours, leftMinutes: remainingMinutes };
-    };
-
-    const currentTime = getCurrentHour();
-    // console.log(`Current hour:  ${currentTime}`);
-
-    if (taskId) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: taskTitle,
-          body: taskDescription,
-          data: {
-            id: taskId,
-            checkedState: taskCheckedState,
-            title: taskTitle,
-            time: taskTime,
-            description: taskDescription,
-          },
-        },
-
-        trigger: {
-          // seconds: currentTime.leftHours * 60 * 60,
-          seconds: 1,
-          //This triggers only at the beginning of the set 'Hour' and minutes are ignored bcs expo-notifications do not support proper scheduling on Android as of now (09/01/2024).
-        },
-      });
-    }
-  }
+    trigger: {
+      seconds: 1,
+    },
+  });
 }
 
 async function registerForPushNotificationsAsync() {

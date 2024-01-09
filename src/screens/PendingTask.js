@@ -86,8 +86,22 @@ const PendingTask = ({ route }) => {
         }}
       >
         {greeting} {"     "}
-        <Text>{loggedUserName},</Text>
       </Text>
+      <View
+        style={{
+          fontWeight: "400",
+          fontSize: 36,
+          marginLeft: 22,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 36,
+          }}
+        >
+          {loggedUserName},
+        </Text>
+      </View>
       <View style={{ marginLeft: 22, marginTop: 20 }}>
         <Text style={{ fontSize: 24, fontWeight: "500" }}>{title}</Text>
         <Text style={{ fontSize: 18, fontWeight: "400", marginLeft: 3 }}>

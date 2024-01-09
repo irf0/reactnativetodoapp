@@ -12,7 +12,7 @@ const WelcomeScreen = ({ navigation }) => {
     setShowWelcomeModal(false);
     try {
       await AsyncStorage.setItem("userName", JSON.stringify(name));
-      await navigation.navigate("Home");
+      await navigation.replace("Home");
     } catch (error) {
       console.log(error);
     }
