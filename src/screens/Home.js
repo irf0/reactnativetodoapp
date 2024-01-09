@@ -664,8 +664,7 @@ async function schedulePushNotification(
         },
 
         trigger: {
-          // seconds: currentTime.leftHours * 60 * 60,
-          seconds: 1,
+          seconds: currentTime.leftHours * 60 * 60,
           //This triggers only at the beginning of the set 'Hour' and minutes are ignored bcs expo-notifications do not support proper scheduling on Android as of now (09/01/2024).
         },
       });
